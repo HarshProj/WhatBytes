@@ -1,7 +1,8 @@
 const express = require('express');
-const { Patient } = require('../models');
+// const { Patient } = require('../models');
 const authMiddleware = require('../middleware/authMiddleware');
 
+const { sequelize, Patient } = require("../models");
 const router = express.Router();
 
 router.post('/', authMiddleware, async (req, res) => {
@@ -9,7 +10,7 @@ router.post('/', authMiddleware, async (req, res) => {
     res.status(201).json(patient);
 });
 
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', async (req, res) => {
     const patients = await Patient.findAll();
     res.json(patients);
 });
@@ -25,9 +26,31 @@ router.put('/:id', authMiddleware, async (req, res) => {
     res.json({ message: "Patient updated" });
 });
 
-router.delete('/:id', authMiddleware, async (req, res) => {
-    await Patient.destroy({ where: { id: req.params.id } });
-    res.json({ message: "Patient deleted" });
+
+router.delete("/:id", authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Delete the patient
+        await Patient.destroy({ where: { id } });
+
+        // Get the correct sequence name dynamically
+        const [[{ sequence_name }]] = await sequelize.query(
+            `SELECT pg_get_serial_sequence('"Patients"', 'id') AS sequence_name;`
+        );
+
+        if (sequence_name) {
+            await sequelize.query(`
+                SELECT setval('${sequence_name}', COALESCE((SELECT MAX(id) FROM "Patients"), 1), false);
+            `);
+        }
+
+        res.status(200).json({ message: "Patient deleted successfully" }); 
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 });
+
 
 module.exports = router;
