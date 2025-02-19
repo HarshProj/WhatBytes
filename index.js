@@ -10,7 +10,15 @@ const mappingRoutes = require('./routes/mappingRoutes');
 const app = express();
 app.use(express.json());
 app.use(cors());
-
+app.get('/',(req,res)=>{
+    res.json({
+        "WhatBytes":"Welcome",
+        "apiRoute":"/api/auth",
+        "patients":"/api/patients",
+        "doctors":"/api/doctors",
+        "mapping":"/api/mapping"
+    })
+})
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/doctors', doctorRoutes);
